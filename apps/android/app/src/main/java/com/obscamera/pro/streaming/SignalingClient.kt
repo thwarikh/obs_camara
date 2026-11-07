@@ -77,7 +77,9 @@ class SignalingClient(
         isCharging: Boolean,
         batteryTempC: Float,
         audioLevelDb: Float,
-        networkType: String
+        networkType: String,
+        rotationDegrees: Int = 0,
+        orientation: String = "landscape"
     ) {
         if (!isConnected) return
 
@@ -92,10 +94,26 @@ class SignalingClient(
                 addProperty("battery_temp_c", batteryTempC)
                 addProperty("audio_level_db", audioLevelDb)
                 addProperty("network_type", networkType)
+                addProperty("rotation_degrees", rotationDegrees)
+                addProperty("orientation", orientation)
             }
             add("payload", payload)
         }
 
+        webSocket?.send(gson.toJson(envelope))
+    }
+
+    fun sendOrientationUpdate(rotationDegrees: Int, orientation: String) {
+        if (!isConnected) return
+        val envelope = JsonObject().apply {
+            addProperty("type", "camera_orientation")
+            addProperty("device_id", deviceId)
+            val payload = JsonObject().apply {
+                addProperty("rotation_degrees", rotationDegrees)
+                addProperty("orientation", orientation)
+            }
+            add("payload", payload)
+        }
         webSocket?.send(gson.toJson(envelope))
     }
 

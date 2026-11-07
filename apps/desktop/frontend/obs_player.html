@@ -15,12 +15,23 @@
       justify-content: center;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     }
+    #player-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
     video {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
       background: transparent;
+      transform-origin: center center;
+      transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
     }
     #status-overlay {
       position: absolute;
@@ -39,6 +50,31 @@
       display: flex;
       align-items: center;
       gap: 6px;
+      z-index: 10;
+    }
+    #orientation-controls {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(56, 189, 248, 0.25);
+      padding: 4px 8px;
+      border-radius: 8px;
+      color: #e2e8f0;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+      z-index: 10;
+      transition: background 0.2s ease;
+    }
+    #orientation-controls:hover {
+      background: rgba(15, 23, 42, 0.95);
+      border-color: rgba(56, 189, 248, 0.5);
     }
     .status-dot {
       width: 8px;
@@ -56,11 +92,19 @@
   </style>
 </head>
 <body>
-  <div id="status-overlay">
-    <div id="dot" class="status-dot"></div>
-    <span id="status-text">Connecting to Camera...</span>
+  <div id="player-container">
+    <div id="status-overlay">
+      <div id="dot" class="status-dot"></div>
+      <span id="status-text">Connecting to Camera...</span>
+    </div>
+
+    <div id="orientation-controls" title="Click to cycle: Auto -> Landscape -> Portrait">
+      <span id="orient-icon">&#128260;</span>
+      <span id="orient-label">Auto: Landscape</span>
+    </div>
+
+    <video id="videoPlayer" autoplay playsinline muted></video>
   </div>
-  <video id="videoPlayer" autoplay playsinline muted></video>
 
   <script>
     const urlParts = window.location.pathname.split('/');
@@ -74,9 +118,98 @@
     const overlay = document.getElementById('status-overlay');
     const statusText = document.getElementById('status-text');
     const dot = document.getElementById('dot');
+    const orientLabel = document.getElementById('orient-label');
+    const orientControl = document.getElementById('orientation-controls');
 
     let pc = null;
     let reconnectTimeout = null;
+    let ws = null;
+
+    // Rotation & Orientation states: 'auto', 'landscape', 'portrait'
+    let orientationMode = 'auto'; // 'auto' | 'landscape' | 'portrait'
+    let detectedAngle = 0; // 0, 90, 180, 270 from phone
+    let currentAngle = 0;
+
+    function applyVideoTransform(angle) {
+      currentAngle = angle;
+      const W = window.innerWidth || document.documentElement.clientWidth;
+      const H = window.innerHeight || document.documentElement.clientHeight;
+
+      if (angle === 90 || angle === 270) {
+        // Swap dimensions: scale so video fills container without borders
+        const scaleFactor = Math.max(W / H, H / W);
+        video.style.transform = `rotate(${angle}deg) scale(${scaleFactor})`;
+      } else {
+        video.style.transform = `rotate(${angle}deg) scale(1)`;
+      }
+    }
+
+    function updateOrientationUI() {
+      let targetAngle = 0;
+      let displayMode = "";
+
+      if (orientationMode === 'auto') {
+        targetAngle = detectedAngle;
+        const isPortrait = (detectedAngle === 90 || detectedAngle === 270);
+        displayMode = `Auto (${isPortrait ? 'Portrait 📱' : 'Landscape 🖥️'})`;
+      } else if (orientationMode === 'landscape') {
+        targetAngle = 0;
+        displayMode = 'Landscape 🖥️';
+      } else if (orientationMode === 'portrait') {
+        targetAngle = 90;
+        displayMode = 'Portrait 📱';
+      }
+
+      orientLabel.innerText = displayMode;
+      applyVideoTransform(targetAngle);
+    }
+
+    // Toggle orientation on click: Auto -> Landscape -> Portrait -> Auto
+    orientControl.addEventListener('click', () => {
+      if (orientationMode === 'auto') {
+        orientationMode = 'landscape';
+      } else if (orientationMode === 'landscape') {
+        orientationMode = 'portrait';
+      } else {
+        orientationMode = 'auto';
+      }
+      updateOrientationUI();
+    });
+
+    window.addEventListener('resize', () => {
+      applyVideoTransform(currentAngle);
+    });
+
+    // Connect to WebSocket for real-time camera orientation detection
+    function connectSignalingWebSocket() {
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/ws/devices`;
+
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onmessage = (event) => {
+          try {
+            const msg = JSON.parse(event.data);
+            if (msg.device_id === deviceId) {
+              if (msg.type === 'camera_orientation' || msg.type === 'telemetry_update') {
+                const data = msg.payload || msg.data || {};
+                if (data.rotation_degrees !== undefined) {
+                  detectedAngle = data.rotation_degrees;
+                  if (orientationMode === 'auto') {
+                    updateOrientationUI();
+                  }
+                }
+              }
+            }
+          } catch(e) {}
+        };
+        ws.onclose = () => {
+          setTimeout(connectSignalingWebSocket, 4000);
+        };
+      } catch (e) {
+        setTimeout(connectSignalingWebSocket, 4000);
+      }
+    }
 
     async function startWhepSession() {
       if (pc) {
@@ -174,8 +307,9 @@
       video.play().catch(() => {});
     });
 
+    updateOrientationUI();
+    connectSignalingWebSocket();
     startWhepSession();
   </script>
 </body>
 </html>
-

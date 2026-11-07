@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.Cameraswitch
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.FlashOn
@@ -198,7 +199,7 @@ fun MainCameraScreen(
             }
         }
 
-        // 4. Floating Lens Selector
+        // 4. Floating Lens Selector & Camera Flip
         Row(
             modifier = Modifier
                 .align(Alignment.CenterEnd)
@@ -210,31 +211,54 @@ fun MainCameraScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                // Zoom preset lenses (.5x, 1x, 3x)
                 listOf(
                     CameraLens.BACK_ULTRAWIDE to "0.5x",
                     CameraLens.BACK_WIDE to "1x",
-                    CameraLens.BACK_TELEPHOTO to "3x",
-                    CameraLens.FRONT to "Front"
+                    CameraLens.BACK_TELEPHOTO to "3x"
                 ).forEach { (lens, label) ->
-                    val isSelected = selectedLens == lens
+                    val isSelected = (selectedLens == lens)
                     Button(
                         onClick = {
                             selectedLens = lens
+                            cameraManager.switchLens(lens)
                         },
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isSelected) Color(0xFF38BDF8) else Color(0xAA0F172A)
                         ),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(0.dp),
                         shape = CircleShape,
                         modifier = Modifier.size(46.dp)
                     ) {
                         Text(
                             text = label,
                             color = if (isSelected) Color.Black else Color.White,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
+                }
+
+                // Camera Flip / Switch icon (Front <-> Back)
+                val isFront = (selectedLens == CameraLens.FRONT)
+                Button(
+                    onClick = {
+                        val newLens = cameraManager.toggleCameraFacing()
+                        selectedLens = newLens
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isFront) Color(0xFF38BDF8) else Color(0xAA0F172A)
+                    ),
+                    contentPadding = PaddingValues(0.dp),
+                    shape = CircleShape,
+                    modifier = Modifier.size(46.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Cameraswitch,
+                        contentDescription = "Switch Camera Front/Back",
+                        tint = if (isFront) Color.Black else Color.White,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
             }
         }

@@ -186,11 +186,42 @@ function handleWsMessage(msg) {
     fetchDevices();
   } else if (msg.type === 'telemetry_update') {
     updateDeviceTelemetryInMemory(msg.device_id, msg.data);
+  } else if (msg.type === 'camera_orientation') {
+    if (msg.payload) {
+      updateDeviceTelemetryInMemory(msg.device_id, msg.payload);
+    }
   } else if (msg.type === 'camera_settings_updated') {
     // If control drawer is open for this device, sync sliders
     if (STATE.selectedDeviceId === msg.device_id) {
       syncControlDrawerValues(msg.settings);
     }
+  }
+}
+
+function updateDeviceTelemetryInMemory(deviceId, data) {
+  const dev = STATE.devices.find(d => d.device_id === deviceId);
+  if (!dev) return;
+  if (!dev.telemetry) dev.telemetry = {};
+  Object.assign(dev.telemetry, data);
+
+  // Update card elements live without full re-render
+  const card = document.querySelector(`[data-device-id="${deviceId}"]`);
+  if (card) {
+    const fpsEl = card.querySelector('.telem-fps');
+    const brEl = card.querySelector('.telem-bitrate');
+    const batEl = card.querySelector('.telem-battery');
+    const orientEl = card.querySelector('.telem-orient');
+    if (fpsEl && data.fps !== undefined) fpsEl.innerText = `${data.fps.toFixed(0)}`;
+    if (brEl && data.bitrate_kbps !== undefined) brEl.innerText = `${data.bitrate_kbps} kbps`;
+    if (batEl && data.battery_pct !== undefined) batEl.innerText = `${data.battery_pct}%`;
+    if (orientEl && data.orientation) orientEl.innerText = data.orientation === 'portrait' ? '📱' : '🖥️';
+  }
+
+  // Update audio VU meter
+  const vuBar = document.getElementById(`vu-${deviceId}`);
+  if (vuBar && data.audio_level_db !== undefined) {
+    const pct = Math.min(100, Math.max(5, data.audio_level_db + 60));
+    vuBar.style.width = `${pct}%`;
   }
 }
 
@@ -261,7 +292,7 @@ function renderDashboardDevices() {
   }
 
   container.innerHTML = STATE.devices.map(dev => `
-    <div class="camera-preview-card">
+    <div class="camera-preview-card" data-device-id="${dev.device_id}">
       <div class="preview-screen">
         <iframe src="${dev.stream_urls.obs_browser_url}" class="preview-video" frameborder="0"></iframe>
         <div class="preview-badges">
@@ -281,9 +312,10 @@ function renderDashboardDevices() {
           <span style="font-size: 11px; color: var(--text-dim); text-transform: uppercase;">${dev.platform}</span>
         </div>
         <div class="telemetry-bar">
-          <span>FPS: <strong>${(dev.telemetry?.fps || 0).toFixed(0)}</strong></span>
-          <span>Bitrate: <strong>${dev.telemetry?.bitrate_kbps || 0} kbps</strong></span>
-          <span>Bat: <strong>${dev.telemetry?.battery_pct || 100}%</strong></span>
+          <span>FPS: <strong class="telem-fps">${(dev.telemetry?.fps || 0).toFixed(0)}</strong></span>
+          <span>Bitrate: <strong class="telem-bitrate">${dev.telemetry?.bitrate_kbps || 0} kbps</strong></span>
+          <span>Bat: <strong class="telem-battery">${dev.telemetry?.battery_pct || 100}%</strong></span>
+          <span><strong class="telem-orient">${dev.telemetry?.orientation === 'portrait' ? '📱' : '🖥️'}</strong></span>
         </div>
         <div class="card-actions-row">
           <button class="btn btn-secondary btn-sm" style="flex: 1;" onclick="openCameraControls('${dev.device_id}')">

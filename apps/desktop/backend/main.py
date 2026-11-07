@@ -142,6 +142,14 @@ async def websocket_camera_endpoint(websocket: WebSocket, device_id: str):
                 device_manager.update_telemetry(device_id, telemetry_data)
                 stream_manager.record_stream_telemetry(device_id, telemetry_data)
                 await ws_manager.broadcast_telemetry(device_id, telemetry_data)
+            elif msg_type == "camera_orientation":
+                orientation_payload = msg.get("payload", {})
+                device_manager.update_telemetry(device_id, orientation_payload)
+                await ws_manager.broadcast_to_desktop({
+                    "type": "camera_orientation",
+                    "device_id": device_id,
+                    "payload": orientation_payload
+                })
             elif msg_type == "camera_control_applied":
                 # Hardware confirmation from phone
                 applied_payload = msg.get("payload", {})

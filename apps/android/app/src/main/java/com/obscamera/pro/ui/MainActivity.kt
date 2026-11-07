@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.view.OrientationEventListener
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -51,6 +52,9 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener, Web
     private var pcHostState = mutableStateOf("")
     private var isScanningQrState = mutableStateOf(false)
     private var connectionTypeState = mutableStateOf("wifi")
+    private var orientationEventListener: OrientationEventListener? = null
+    private var currentOrientationState = mutableStateOf("landscape")
+    private var currentRotationState = mutableStateOf(0)
 
     private val httpClient = OkHttpClient()
 
@@ -85,6 +89,29 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener, Web
             connectionTypeState.value = type
         }
         networkMonitor.startMonitoring()
+
+        // Setup real-time device orientation & rotation detection
+        orientationEventListener = object : OrientationEventListener(this) {
+            override fun onOrientationChanged(orientation: Int) {
+                if (orientation == ORIENTATION_UNKNOWN) return
+                val rotation = when (orientation) {
+                    in 45..134 -> 270
+                    in 135..224 -> 180
+                    in 225..314 -> 90
+                    else -> 0
+                }
+                val isPortrait = (rotation == 0 || rotation == 180)
+                val orientStr = if (isPortrait) "portrait" else "landscape"
+                if (currentRotationState.value != rotation || currentOrientationState.value != orientStr) {
+                    currentRotationState.value = rotation
+                    currentOrientationState.value = orientStr
+                    signalingClient?.sendOrientationUpdate(rotation, orientStr)
+                }
+            }
+        }
+        if (orientationEventListener?.canDetectOrientation() == true) {
+            orientationEventListener?.enable()
+        }
 
         checkPermissions()
 
@@ -280,7 +307,9 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener, Web
                     isCharging = false,
                     batteryTempC = 34.0f,
                     audioLevelDb = audioManager.currentAudioLevelDb,
-                    networkType = connectionTypeState.value
+                    networkType = connectionTypeState.value,
+                    rotationDegrees = currentRotationState.value,
+                    orientation = currentOrientationState.value
                 )
                 delay(1000)
             }
@@ -340,6 +369,7 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener, Web
 
     override fun onDestroy() {
         super.onDestroy()
+        orientationEventListener?.disable()
         networkMonitor.stopMonitoring()
         webRtcClient?.stopStreaming()
         audioManager.stopCapture()

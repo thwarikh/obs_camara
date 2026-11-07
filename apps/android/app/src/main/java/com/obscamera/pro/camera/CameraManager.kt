@@ -43,6 +43,8 @@ class CameraManager(private val context: Context) {
         private set
     var currentProfile: ResolutionProfile = ResolutionProfile.PROFILE_1080P30
         private set
+    var currentRotationDegrees: Int = 0
+        private set
 
     // Hardware bounds
     var isoRange: Range<Int> = Range(50, 3200)
@@ -89,6 +91,7 @@ class CameraManager(private val context: Context) {
             .also { analysis ->
                 analysis.setAnalyzer(analysisExecutor) { imageProxy ->
                     val mediaImage = imageProxy.image
+                    currentRotationDegrees = imageProxy.imageInfo.rotationDegrees
 
                     // 1. Process QR Scanning if requested
                     if (isQrScanningEnabled && mediaImage != null) {
@@ -204,16 +207,56 @@ class CameraManager(private val context: Context) {
         control.setCaptureRequestOptions(options)
     }
 
-    fun switchLens(lens: CameraLens, lifecycleOwner: LifecycleOwner, surfaceProvider: Preview.SurfaceProvider) {
-        if (currentLens == lens) return
+    fun switchLens(
+        lens: CameraLens,
+        lifecycleOwner: LifecycleOwner? = null,
+        surfaceProvider: Preview.SurfaceProvider? = null
+    ) {
+        val owner = lifecycleOwner ?: cachedLifecycleOwner ?: return
+        val provider = surfaceProvider ?: cachedSurfaceProvider ?: return
+
+        val wasFront = (currentLens == CameraLens.FRONT)
+        val isTargetFront = (lens == CameraLens.FRONT)
         currentLens = lens
-        bindCamera(lifecycleOwner, surfaceProvider)
+
+        if (wasFront != isTargetFront) {
+            bindCamera(owner, provider)
+        }
+
+        // Apply optical/digital zoom ratio for target lens focal length
+        when (lens) {
+            CameraLens.BACK_ULTRAWIDE -> {
+                val minZoom = camera?.cameraInfo?.zoomState?.value?.minZoomRatio ?: 1.0f
+                setZoom(if (minZoom < 1.0f) minZoom else 0.6f)
+            }
+            CameraLens.BACK_WIDE -> {
+                setZoom(1.0f)
+            }
+            CameraLens.BACK_TELEPHOTO -> {
+                val maxZoom = camera?.cameraInfo?.zoomState?.value?.maxZoomRatio ?: 10.0f
+                setZoom(3.0f.coerceAtMost(maxZoom))
+            }
+            CameraLens.FRONT -> {
+                setZoom(1.0f)
+            }
+        }
     }
 
-    fun switchProfile(profile: ResolutionProfile, lifecycleOwner: LifecycleOwner, surfaceProvider: Preview.SurfaceProvider) {
+    fun toggleCameraFacing(
+        lifecycleOwner: LifecycleOwner? = null,
+        surfaceProvider: Preview.SurfaceProvider? = null
+    ): CameraLens {
+        val target = if (currentLens == CameraLens.FRONT) CameraLens.BACK_WIDE else CameraLens.FRONT
+        switchLens(target, lifecycleOwner, surfaceProvider)
+        return target
+    }
+
+    fun switchProfile(profile: ResolutionProfile, lifecycleOwner: LifecycleOwner? = null, surfaceProvider: Preview.SurfaceProvider? = null) {
+        val owner = lifecycleOwner ?: cachedLifecycleOwner ?: return
+        val provider = surfaceProvider ?: cachedSurfaceProvider ?: return
         if (currentProfile == profile) return
         currentProfile = profile
-        bindCamera(lifecycleOwner, surfaceProvider)
+        bindCamera(owner, provider)
     }
 }
 
