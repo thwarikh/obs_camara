@@ -182,7 +182,7 @@ function connectWebSocket() {
 }
 
 function handleWsMessage(msg) {
-  if (msg.type === 'device_connected' || msg.type === 'device_disconnected' || msg.type === 'device_deleted') {
+  if (msg.type === 'device_connected' || msg.type === 'device_disconnected' || msg.type === 'device_deleted' || msg.type === 'device_renamed' || msg.type === 'device_registered') {
     fetchDevices();
   } else if (msg.type === 'telemetry_update') {
     updateDeviceTelemetryInMemory(msg.device_id, msg.data);

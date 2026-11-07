@@ -83,6 +83,7 @@ class CameraManager(private val context: Context) {
 
         val analysisExecutor = Executors.newSingleThreadExecutor()
         val imageAnalysis = ImageAnalysis.Builder()
+            .setTargetResolution(targetResolution)
             .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
             .build()
             .also { analysis ->

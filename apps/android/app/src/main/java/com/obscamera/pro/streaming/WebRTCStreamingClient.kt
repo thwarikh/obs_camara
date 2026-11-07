@@ -1,6 +1,8 @@
 package com.obscamera.pro.streaming
 
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
@@ -29,6 +31,9 @@ class WebRTCStreamingClient(
     private var capturerObserver: CapturerObserver? = null
 
     private val httpClient = OkHttpClient()
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var isWhipOfferSent = false
+
     var isStreaming = false
         private set
 
@@ -59,6 +64,7 @@ class WebRTCStreamingClient(
         val factory = peerConnectionFactory ?: return
         if (isStreaming) return
         isStreaming = true
+        isWhipOfferSent = false
 
         // 1. Video Source & Track
         val videoSource = factory.createVideoSource(false)
@@ -85,14 +91,23 @@ class WebRTCStreamingClient(
         }
 
         peerConnection = factory.createPeerConnection(rtcConfig, object : PeerConnection.Observer {
-            override fun onIceCandidate(candidate: IceCandidate?) {}
+            override fun onIceCandidate(candidate: IceCandidate?) {
+                Log.d(tag, "Discovered local ICE candidate: ${candidate?.sdp}")
+            }
             override fun onIceCandidatesRemoved(candidates: Array<out IceCandidate>?) {}
             override fun onSignalingChange(state: PeerConnection.SignalingState?) {}
             override fun onIceConnectionChange(state: PeerConnection.IceConnectionState?) {
                 Log.d(tag, "ICE Connection State: $state")
             }
             override fun onIceConnectionReceivingChange(receiving: Boolean) {}
-            override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {}
+            override fun onIceGatheringChange(state: PeerConnection.IceGatheringState?) {
+                Log.d(tag, "ICE Gathering State: $state")
+                if (state == PeerConnection.IceGatheringState.COMPLETE) {
+                    mainHandler.post {
+                        maybeSendGatheredOffer()
+                    }
+                }
+            }
             override fun onAddStream(stream: MediaStream?) {}
             override fun onRemoveStream(stream: MediaStream?) {}
             override fun onDataChannel(dc: DataChannel?) {}
@@ -116,10 +131,16 @@ class WebRTCStreamingClient(
                     peerConnection?.setLocalDescription(object : SdpObserver {
                         override fun onCreateSuccess(p0: SessionDescription?) {}
                         override fun onSetSuccess() {
-                            sendWhipOffer(offerSdp.description)
+                            // MediaMTX requires Vanilla ICE (candidates present in SDP).
+                            // Wait for ICE gathering to complete, or fallback after 1200ms to send with gathered host candidates.
+                            mainHandler.postDelayed({
+                                maybeSendGatheredOffer()
+                            }, 1200)
                         }
                         override fun onCreateFailure(p0: String?) {}
-                        override fun onSetFailure(p0: String?) {}
+                        override fun onSetFailure(err: String?) {
+                            Log.e(tag, "setLocalDescription failed: $err")
+                        }
                     }, offerSdp)
                 }
             }
@@ -129,6 +150,20 @@ class WebRTCStreamingClient(
             }
             override fun onSetFailure(err: String?) {}
         }, mediaConstraints)
+    }
+
+    private fun maybeSendGatheredOffer() {
+        if (isWhipOfferSent || !isStreaming) return
+        isWhipOfferSent = true
+
+        val sdpDescription = peerConnection?.localDescription?.description
+        if (sdpDescription.isNullOrEmpty()) {
+            Log.w(tag, "localDescription is null or empty, cannot send WHIP offer")
+            return
+        }
+
+        Log.i(tag, "Sending gathered WHIP Offer (${sdpDescription.length} bytes) to $whipUrl")
+        sendWhipOffer(sdpDescription)
     }
 
     fun onFrameCaptured(frame: VideoFrame) {
@@ -175,6 +210,7 @@ class WebRTCStreamingClient(
 
     fun stopStreaming() {
         isStreaming = false
+        isWhipOfferSent = false
         try {
             peerConnection?.close()
             peerConnection = null

@@ -1,13 +1,29 @@
 """
 Device management REST API endpoints.
 """
+import os
+import sys
+from pathlib import Path
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 
+# Ensure backend package root is in sys.path
+backend_dir = str(Path(__file__).resolve().parent.parent.parent)
+if backend_dir not in sys.path:
+    sys.path.insert(0, backend_dir)
+
 from app.database.connection import get_db
-from app.database.models import Device, CameraCapability, CameraSetting, AudioSetting, EventLog
+from app.database.models import (
+    Device,
+    CameraCapability,
+    CameraSetting,
+    AudioSetting,
+    EventLog,
+    DevicePairing,
+    StreamSession
+)
 from app.devices.device_manager import device_manager
 from app.streaming.stream_manager import stream_manager
 from app.services.network_service import NetworkService
@@ -82,7 +98,7 @@ def create_pairing(host_ip: Optional[str] = None):
     return device_manager.generate_pairing_payload(host_ip)
 
 @router.post("/register")
-def register_device(payload: DeviceRegisterRequest, db: Session = Depends(get_db)):
+async def register_device(payload: DeviceRegisterRequest, db: Session = Depends(get_db)):
     """
     Called by mobile app upon pairing to register device hardware.
     """
@@ -106,6 +122,14 @@ def register_device(payload: DeviceRegisterRequest, db: Session = Depends(get_db
 
     host_ip = NetworkService.get_local_ip()
     stream_urls = stream_manager.get_stream_urls(device.device_id, host_ip)
+
+    await ws_manager.broadcast_to_desktop({
+        "type": "device_registered",
+        "device_id": device.device_id,
+        "custom_name": device.custom_name,
+        "platform": device.platform,
+        "model": device.model
+    })
 
     return {
         "status": "success",
@@ -174,13 +198,21 @@ def get_device_detail(device_id: str, db: Session = Depends(get_db)):
     }
 
 @router.put("/{device_id}/rename")
-def rename_device(device_id: str, payload: DeviceRenameRequest, db: Session = Depends(get_db)):
+async def rename_device(device_id: str, payload: DeviceRenameRequest, db: Session = Depends(get_db)):
     device = db.query(Device).filter(Device.device_id == device_id).first()
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
-    device.custom_name = payload.custom_name
+    setattr(device, "custom_name", payload.custom_name)
     db.commit()
-    return {"status": "success", "custom_name": device.custom_name}
+    db.refresh(device)
+
+    await ws_manager.broadcast_to_desktop({
+        "type": "device_renamed",
+        "device_id": device_id,
+        "custom_name": payload.custom_name
+    })
+
+    return {"status": "success", "custom_name": str(device.custom_name)}
 
 @router.post("/{device_id}/capabilities")
 def report_capabilities(device_id: str, caps: CapabilitiesReportRequest, db: Session = Depends(get_db)):
@@ -196,10 +228,12 @@ async def delete_device(device_id: str, db: Session = Depends(get_db)):
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
 
-    # Clean up associated DB tables
+    # Clean up associated DB tables explicitly
     db.query(CameraCapability).filter(CameraCapability.device_id == device_id).delete()
     db.query(CameraSetting).filter(CameraSetting.device_id == device_id).delete()
     db.query(AudioSetting).filter(AudioSetting.device_id == device_id).delete()
+    db.query(DevicePairing).filter(DevicePairing.device_id == device_id).delete()
+    db.query(StreamSession).filter(StreamSession.device_id == device_id).delete()
     db.delete(device)
     db.commit()
 
@@ -209,4 +243,3 @@ async def delete_device(device_id: str, db: Session = Depends(get_db)):
         "device_id": device_id
     })
     return {"status": "success", "message": f"Device {device_id} removed"}
-

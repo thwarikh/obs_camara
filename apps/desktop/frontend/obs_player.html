@@ -125,10 +125,26 @@
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
+        // Wait for ICE gathering so vanilla ICE includes local host candidates
+        await new Promise((resolve) => {
+          if (pc.iceGatheringState === 'complete') {
+            resolve();
+          } else {
+            const check = () => {
+              if (pc.iceGatheringState === 'complete') {
+                pc.removeEventListener('icegatheringstatechange', check);
+                resolve();
+              }
+            };
+            pc.addEventListener('icegatheringstatechange', check);
+            setTimeout(resolve, 1500);
+          }
+        });
+
         const resp = await fetch(whepUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/sdp' },
-          body: offer.sdp
+          body: pc.localDescription ? pc.localDescription.sdp : offer.sdp
         });
 
         if (!resp.ok) {

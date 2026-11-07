@@ -61,7 +61,7 @@ fun MainCameraScreen(
     var torchOn by remember { mutableStateOf(false) }
 
     var manualIpInput by remember { mutableStateOf(if (pcHost.isNotEmpty()) pcHost else "192.168.1.") }
-    var manualPortInput by remember { mutableStateOf("8000") }
+    var manualPortInput by remember { mutableStateOf("8765") }
 
     Box(
         modifier = Modifier
@@ -440,7 +440,7 @@ fun MainCameraScreen(
                 confirmButton = {
                     Button(
                         onClick = {
-                            val portInt = manualPortInput.toIntOrNull() ?: 8000
+                            val portInt = manualPortInput.toIntOrNull() ?: 8765
                             onConnectManualIp(manualIpInput.trim(), portInt)
                             showPairingDialog = false
                         },

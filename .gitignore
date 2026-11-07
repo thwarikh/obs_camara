@@ -20,6 +20,8 @@ obscam.db
 # MediaMTX downloaded binaries
 services/mediamtx/mediamtx.exe
 services/mediamtx/*.zip
+services/mediamtx/*.crt
+services/mediamtx/*.key
 
 # Android build outputs
 apps/android/.gradle/

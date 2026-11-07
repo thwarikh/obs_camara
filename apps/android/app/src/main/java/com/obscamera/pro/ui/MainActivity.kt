@@ -91,7 +91,8 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener, Web
         // Restore saved PC host if previously paired
         val prefs = getSharedPreferences("obs_camera_prefs", Context.MODE_PRIVATE)
         val savedHost = prefs.getString("pc_host", "") ?: ""
-        val savedPort = prefs.getInt("pc_port", 8000)
+        var savedPort = prefs.getInt("pc_port", 8765)
+        if (savedPort == 8000) savedPort = 8765
         if (savedHost.isNotEmpty()) {
             pcHostState.value = savedHost
             connectToPc(savedHost, savedPort)
@@ -233,6 +234,8 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener, Web
                         }
 
                         Toast.makeText(this@MainActivity, "Connected to OBS PC ($host:$port)", Toast.LENGTH_LONG).show()
+                        // Automatically begin WebRTC video broadcast to Desktop
+                        startBroadcast()
                     } else {
                         Toast.makeText(this@MainActivity, "PC Connection failed: HTTP ${response.code}", Toast.LENGTH_LONG).show()
                     }
