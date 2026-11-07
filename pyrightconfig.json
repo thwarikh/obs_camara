@@ -1,0 +1,15 @@
+{
+  "include": [
+    ".",
+    "apps/desktop/backend",
+    "tests"
+  ],
+  "extraPaths": [
+    "apps/desktop/backend"
+  ],
+  "pythonVersion": "3.12",
+  "pythonPlatform": "Windows",
+  "venvPath": ".",
+  "venv": "venv"
+}
+

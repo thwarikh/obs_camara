@@ -1,0 +1,73 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "OBSCameraProControlProtocol",
+  "description": "Standardized WebSocket Control & Telemetry protocol between Desktop and Mobile Camera endpoints",
+  "definitions": {
+    "MessageEnvelope": {
+      "type": "object",
+      "required": ["version", "type", "device_id", "timestamp", "payload"],
+      "properties": {
+        "version": { "type": "string", "enum": ["1.0"] },
+        "type": {
+          "type": "string",
+          "enum": [
+            "ping", "pong",
+            "device_info", "capabilities_report",
+            "camera_control_command", "camera_control_applied",
+            "audio_control_command", "audio_control_applied",
+            "stream_config_command", "stream_config_applied",
+            "telemetry_report",
+            "webrtc_signal"
+          ]
+        },
+        "device_id": { "type": "string" },
+        "session_token": { "type": "string" },
+        "timestamp": { "type": "integer" },
+        "payload": { "type": "object" }
+      }
+    },
+    "CameraControlPayload": {
+      "type": "object",
+      "properties": {
+        "zoom": { "type": "number", "minimum": 1.0, "maximum": 10.0 },
+        "focus_mode": { "type": "string", "enum": ["auto", "continuous", "manual"] },
+        "focus_distance": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "exposure_mode": { "type": "string", "enum": ["auto", "manual"] },
+        "exposure_compensation": { "type": "number", "minimum": -4.0, "maximum": 4.0 },
+        "iso": { "type": "integer", "minimum": 50, "maximum": 6400 },
+        "shutter_speed_ns": { "type": "integer" },
+        "white_balance_mode": { "type": "string", "enum": ["auto", "incandescent", "fluorescent", "daylight", "cloudy", "manual"] },
+        "white_balance_temperature": { "type": "integer", "minimum": 2000, "maximum": 10000 },
+        "torch_enabled": { "type": "boolean" },
+        "torch_level": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "lens": { "type": "string", "enum": ["back_wide", "back_ultrawide", "back_telephoto", "front"] },
+        "resolution_profile": { "type": "string", "enum": ["720p30", "1080p30", "1080p60", "4k30"] }
+      }
+    },
+    "AudioControlPayload": {
+      "type": "object",
+      "properties": {
+        "muted": { "type": "boolean" },
+        "gain": { "type": "number", "minimum": 0.0, "maximum": 2.0 },
+        "input_source": { "type": "string", "enum": ["default", "built_in_mic", "external_mic", "bluetooth"] },
+        "echo_cancellation": { "type": "boolean" }
+      }
+    },
+    "TelemetryPayload": {
+      "type": "object",
+      "properties": {
+        "fps": { "type": "number" },
+        "bitrate_kbps": { "type": "integer" },
+        "battery_pct": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "is_charging": { "type": "boolean" },
+        "battery_temp_c": { "type": "number" },
+        "audio_level_db": { "type": "number" },
+        "network_type": { "type": "string", "enum": ["wifi", "usb_tethering", "ethernet", "cellular", "unknown"] },
+        "network_rtt_ms": { "type": "number" },
+        "packet_loss_pct": { "type": "number" },
+        "dropped_frames": { "type": "integer" }
+      }
+    }
+  }
+}
+

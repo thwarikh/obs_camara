@@ -1,0 +1,55 @@
+# OBS Camera Pro MediaMTX Configuration
+# Optimized for ultra-low latency WebRTC (WHIP / WHEP) and RTSP streaming
+
+logLevel: info
+logDestinations: [stdout]
+
+# API server for backend monitoring
+api: yes
+apiAddress: :9997
+
+# Metrics for Prometheus / Desktop dashboard
+metrics: yes
+metricsAddress: :9998
+
+# RTSP Configuration (OBS Media Source fallback)
+rtsp: yes
+protocols: [tcp, udp]
+rtspAddress: :8554
+rtspsAddress: :8322
+rtpAddress: :8000
+rtcpAddress: :8001
+
+# RTMP Configuration
+rtmp: yes
+rtmpAddress: :1935
+
+# WebRTC Configuration (Primary low-latency protocol)
+webrtc: yes
+webrtcAddress: :8889
+webrtcEncryption: no
+webrtcLocalUDPAddress: :8189
+webrtcIPsFromInterfaces: yes
+webrtcAdditionalHosts: []
+webrtcHandshakeTimeout: 10s
+webrtcTrackGatherTimeout: 2s
+
+# HLS Configuration (Optional web preview fallback)
+hls: yes
+hlsAddress: :8888
+hlsAlwaysRemux: no
+hlsVariant: lowLatency
+hlsSegmentCount: 3
+hlsSegmentDuration: 1s
+hlsPartDuration: 200ms
+
+# Path definitions
+paths:
+  all_others:
+    # Allow dynamic paths created by mobile camera apps (e.g. /camera-01, /camera-02)
+    source: publisher
+    sourceOnDemand: no
+    overridePublisher: yes
+    # Maximum low-latency buffer
+    readTimeout: 10s
+    writeTimeout: 10s

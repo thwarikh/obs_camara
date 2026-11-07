@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OBS Camera Pro - Control Center</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <i data-lucide="video"></i>
+      </div>
+      <div class="brand-text">
+        <h1>OBS Camera Pro</h1>
+        <span>Studio Edition</span>
+      </div>
+    </div>
+
+    <nav class="nav-menu">
+      <a class="nav-item active" data-view="dashboard">
+        <i data-lucide="layout-dashboard"></i>
+        <span>Dashboard</span>
+      </a>
+      <a class="nav-item" data-view="studio">
+        <i data-lucide="grid"></i>
+        <span>Multi-Camera Studio</span>
+      </a>
+      <a class="nav-item" data-view="streams">
+        <i data-lucide="activity"></i>
+        <span>Stream Manager</span>
+      </a>
+      <a class="nav-item" data-view="audio">
+        <i data-lucide="volume-2"></i>
+        <span>Audio Mixer</span>
+      </a>
+      <a class="nav-item" data-view="obs">
+        <i data-lucide="tv"></i>
+        <span>OBS Integration</span>
+      </a>
+      <a class="nav-item" data-view="network">
+        <i data-lucide="wifi"></i>
+        <span>Network & USB</span>
+      </a>
+      <a class="nav-item" data-view="logs">
+        <i data-lucide="terminal"></i>
+        <span>System Logs</span>
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <span>v1.0.0 Production</span>
+      <span style="color: var(--accent-cyan); font-weight: 600;">WebRTC / WSEP</span>
+    </div>
+  </aside>
+
+  <!-- Main Wrapper -->
+  <div class="main-wrapper">
+    <!-- Top Header -->
+    <header class="top-header">
+      <div class="header-status-group">
+        <div class="status-pill">
+          <span id="backendStatusDot" class="status-dot online"></span>
+          <span id="backendStatusText">Backend Online</span>
+        </div>
+        <div class="status-pill">
+          <span class="status-dot online"></span>
+          <span>MediaMTX: 8889 (WebRTC)</span>
+        </div>
+        <div class="status-pill">
+          <span id="obsStatusDot" class="status-dot offline"></span>
+          <span id="obsStatusText">OBS: Disconnected</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="openPairModalBtn" class="btn btn-primary">
+          <i data-lucide="qr-code"></i>
+          <span>Pair Phone Camera</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Content Area -->
+    <main class="content-area">
+      <!-- 1. DASHBOARD VIEW -->
+      <section id="view-dashboard" class="page-view active">
+        <div class="page-header">
+          <div>
+            <h2>Production Dashboard</h2>
+            <p>Live status of multi-camera streaming sessions, bandwidth, and OBS sources.</p>
+          </div>
+        </div>
+
+        <!-- Metric Cards -->
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-header">
+              <span>Connected Cameras</span>
+              <div class="metric-icon"><i data-lucide="smartphone"></i></div>
+            </div>
+            <div id="metricConnectedCount" class="metric-val">0</div>
+            <div class="metric-sub">Android & iOS devices</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span>Active Streams</span>
+              <div class="metric-icon"><i data-lucide="play-circle"></i></div>
+            </div>
+            <div id="metricActiveStreams" class="metric-val">0</div>
+            <div class="metric-sub">Low-latency WebRTC</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span>Total Bitrate</span>
+              <div class="metric-icon"><i data-lucide="arrow-down-circle"></i></div>
+            </div>
+            <div id="metricTotalBitrate" class="metric-val">0.0 Mbps</div>
+            <div class="metric-sub">Ingress bandwidth</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span>Average FPS</span>
+              <div class="metric-icon"><i data-lucide="gauge"></i></div>
+            </div>
+            <div id="metricAvgFps" class="metric-val">0 FPS</div>
+            <div class="metric-sub">Target: 30 / 60 FPS</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span>Host CPU Usage</span>
+              <div class="metric-icon"><i data-lucide="cpu"></i></div>
+            </div>
+            <div id="metricCpu" class="metric-val">0%</div>
+            <div class="metric-sub">Intel Core Optimized</div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-header">
+              <span>Host RAM</span>
+              <div class="metric-icon"><i data-lucide="hard-drive"></i></div>
+            </div>
+            <div id="metricMemory" class="metric-val">0%</div>
+            <div class="metric-sub">Memory Footprint</div>
+          </div>
+        </div>
+
+        <!-- Realtime Charts -->
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>Realtime Ingress Streaming Bandwidth (Mbps)</span>
+              <span class="badge-tag" style="background: rgba(56, 189, 248, 0.15); color: var(--accent-cyan);">Live</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+              <canvas id="bitrateChartCanvas"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>System Resource Allocation</span>
+            </div>
+            <div class="chart-canvas-wrapper">
+              <canvas id="systemChartCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Connected Cameras Grid -->
+        <div class="page-header" style="margin-top: 32px;">
+          <div>
+            <h3>Live Camera Feeds</h3>
+            <p>Active smartphone inputs ready for OBS broadcast</p>
+          </div>
+        </div>
+        <div id="dashboardCameraList" class="studio-grid"></div>
+      </section>
+
+      <!-- 2. MULTI-CAMERA STUDIO VIEW -->
+      <section id="view-studio" class="page-view">
+        <div class="page-header">
+          <div>
+            <h2>Multi-Camera Studio</h2>
+            <p>Live multi-camera switching and per-camera controls</p>
+          </div>
+        </div>
+        <div id="studioGridContainer" class="studio-grid"></div>
+      </section>
+
+      <!-- 3. STREAM MANAGER VIEW -->
+      <section id="view-streams" class="page-view">
+        <div class="page-header">
+          <div>
+            <h2>Stream Manager</h2>
+            <p>Inspect MediaMTX WebRTC (WSEP / WHEP) and RTSP outputs</p>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">MediaMTX Routing Endpoints</div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+            Streams are automatically ingested via WebRTC WHIP and served to OBS Studio via WebRTC WHEP Browser Source.
+          </p>
+          <div id="streamEndpointsList" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
+      </section>
+
+      <!-- 4. AUDIO MIXER VIEW -->
+      <section id="view-audio" class="page-view">
+        <div class="page-header">
+          <div>
+            <h2>Audio Mixer</h2>
+            <p>Control volume gain, mute states, and audio-to-OBS routing for each smartphone microphone</p>
+          </div>
+        </div>
+        <div id="audioMixerContainer" class="audio-mixer-grid"></div>
+      </section>
+
+      <!-- 5. OBS INTEGRATION VIEW -->
+      <section id="view-obs" class="page-view">
+        <div class="page-header">
+          <div>
+            <h2>OBS Studio Integration</h2>
+            <p>Connect to OBS WebSocket v5 to auto-create Browser Sources and switch scenes</p>
+          </div>
+        </div>
+
+        <div class="charts-grid">
+          <div class="chart-card">
+            <div class="chart-title">OBS WebSocket Connection</div>
+            <div class="form-group">
+              <label class="form-label">OBS Host Address</label>
+              <input id="obsHostInput" type="text" class="form-control" value="127.0.0.1">
+            </div>
+            <div class="form-group">
+              <label class="form-label">WebSocket Port</label>
+              <input id="obsPortInput" type="number" class="form-control" value="4455">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Server Password (if configured)</label>
+              <input id="obsPasswordInput" type="password" class="form-control" placeholder="OBS WebSocket Password">
+            </div>
+            <button class="btn btn-primary" onclick="connectOBS()" style="align-self: flex-start; margin-top: 8px;">
+              <i data-lucide="link"></i> Connect to OBS Studio
+            </button>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">OBS Scenes</div>
+            <div id="obsSceneList" style="display: flex; flex-direction: column; gap: 10px;"></div>
+          </div>
+        </div>
+
+        <!-- OBS Broadcast Controls -->
+        <div class="chart-card" style="margin-top: 20px;">
+          <div class="chart-title">OBS Output Controls</div>
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px;">Trigger OBS Studio outputs remotely directly from the control room.</p>
+          <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <button id="obsRecordBtn" class="btn btn-secondary" onclick="toggleOBSOutput('record')">
+              <i data-lucide="circle-dot"></i> <span id="obsRecordBtnText">Toggle Recording</span>
+            </button>
+            <button id="obsStreamBtn" class="btn btn-secondary" onclick="toggleOBSOutput('stream')">
+              <i data-lucide="radio"></i> <span id="obsStreamBtnText">Toggle OBS Stream</span>
+            </button>
+            <button id="obsVcamBtn" class="btn btn-secondary" onclick="toggleOBSOutput('virtual_cam')">
+              <i data-lucide="camera"></i> <span id="obsVcamBtnText">Toggle Virtual Camera</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. NETWORK & USB VIEW -->
+      <section id="view-network" class="page-view">
+        <div class="page-header">
+          <div>
+            <h2>Network & USB Connectivity</h2>
+            <p>Manage Wi-Fi and USB Tethering network interfaces</p>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-title">Active Host Interfaces</div>
+          <div id="networkInterfacesContainer" style="display: flex; flex-direction: column; gap: 12px;"></div>
+        </div>
+
+        <!-- USB Tethering Step-by-Step Setup Guide -->
+        <div class="charts-grid" style="margin-top: 20px;">
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>Android USB Wired Tethering</span>
+              <span class="badge-tag" style="background: rgba(16, 185, 129, 0.15); color: var(--success);"><i data-lucide="zap"></i> 50ms Latency</span>
+            </div>
+            <ol style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.8;">
+              <li>Connect your Android phone to the PC using a USB cable.</li>
+              <li>Open phone <strong>Settings ➔ Network & Internet</strong>.</li>
+              <li>Tap <strong>Hotspot & Tethering</strong>.</li>
+              <li>Toggle on <strong>USB Tethering</strong>.</li>
+              <li>The desktop immediately detects the wired RNDIS network adapter.</li>
+            </ol>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">
+              <span>iPhone USB Wired Tethering</span>
+              <span class="badge-tag" style="background: rgba(16, 185, 129, 0.15); color: var(--success);"><i data-lucide="zap"></i> 50ms Latency</span>
+            </div>
+            <ol style="font-size: 13px; color: var(--text-muted); padding-left: 20px; line-height: 1.8;">
+              <li>Connect your iPhone to the PC using a Lightning or USB-C cable.</li>
+              <li>Open iPhone <strong>Settings ➔ Personal Hotspot</strong>.</li>
+              <li>Enable <strong>Allow Others to Join</strong>.</li>
+              <li>When prompted by iOS, tap <strong>Trust This Computer</strong>.</li>
+              <li>The desktop immediately routes high-speed wired stream data.</li>
+            </ol>
+          </div>
+        </div>
+      </section>
+
+      <!-- 7. SYSTEM LOGS VIEW -->
+      <section id="view-logs" class="page-view">
+        <div class="page-header">
+          <div>
+            <h2>System & Event Logs</h2>
+            <p>Real-time connection, streaming, and hardware event log</p>
+          </div>
+          <button class="btn btn-secondary btn-sm" onclick="loadLogs()">
+            <i data-lucide="refresh-cw"></i> Refresh
+          </button>
+        </div>
+        <div class="chart-card" style="padding: 0; overflow: hidden;">
+          <table class="log-table">
+            <thead>
+              <tr>
+                <th style="width: 100px;">Time</th>
+                <th style="width: 90px;">Level</th>
+                <th style="width: 120px;">Source</th>
+                <th>Message</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- QR CODE PAIRING MODAL -->
+  <div id="pairModal" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Pair Smartphone Camera</h3>
+        <button id="closePairModalBtn" class="close-btn"><i data-lucide="x"></i></button>
+      </div>
+      <p style="font-size: 13px; color: var(--text-muted);">
+        Open the <strong>OBS Camera Pro</strong> app on your Android or iPhone and point the scanner at this QR code.
+      </p>
+      <div id="qrCodeContainer" style="padding: 16px 0;"></div>
+      <div style="font-size: 12px; color: var(--text-dim); line-height: 1.5; background: rgba(15, 23, 42, 0.6); padding: 12px; border-radius: 8px;">
+        💡 <strong>USB Tethering Tip:</strong> If connected via USB tethering, the app automatically establishes a high-speed wired connection with lower latency.
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMERA REMOTE CONTROL MODAL / DRAWER -->
+  <div id="controlModal" class="modal-overlay">
+    <div class="modal-content" style="width: 600px;">
+      <div class="modal-header">
+        <h3 id="controlDeviceTitle">Camera Remote Controls</h3>
+        <button id="closeControlModalBtn" class="close-btn"><i data-lucide="x"></i></button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 16px; max-height: 70vh; overflow-y: auto; padding-right: 6px;">
+        <!-- Zoom -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>Optical / Digital Zoom</span>
+            <span id="zoomValDisplay" style="color: var(--accent-cyan); font-weight: 700;">1.0x</span>
+          </div>
+          <input id="controlZoom" type="range" class="slider-input" min="1.0" max="10.0" step="0.1" value="1.0"
+            oninput="document.getElementById('zoomValDisplay').innerText = parseFloat(this.value).toFixed(1) + 'x'"
+            onchange="dispatchCameraControl('zoom', parseFloat(this.value))">
+        </div>
+
+        <!-- Manual Focus -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>Manual Focus Distance</span>
+            <span id="focusValDisplay" style="color: var(--accent-cyan); font-weight: 700;">Auto</span>
+          </div>
+          <input id="controlFocusDist" type="range" class="slider-input" min="0.0" max="1.0" step="0.02" value="0.0"
+            oninput="document.getElementById('focusValDisplay').innerText = parseFloat(this.value).toFixed(2)"
+            onchange="dispatchCameraControl('focus_distance', parseFloat(this.value)); dispatchCameraControl('focus_mode', 'manual')">
+          <div style="display: flex; gap: 8px; margin-top: 4px;">
+            <button class="btn btn-secondary btn-sm" onclick="dispatchCameraControl('focus_mode', 'auto'); document.getElementById('focusValDisplay').innerText='Auto'">Set Auto Focus</button>
+            <button class="btn btn-secondary btn-sm" onclick="dispatchCameraControl('focus_mode', 'continuous'); document.getElementById('focusValDisplay').innerText='Continuous'">Continuous AF</button>
+          </div>
+        </div>
+
+        <!-- ISO -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>ISO Sensitivity</span>
+            <span id="isoValDisplay" style="color: var(--accent-cyan); font-weight: 700;">100</span>
+          </div>
+          <input id="controlISO" type="range" class="slider-input" min="50" max="3200" step="50" value="100"
+            oninput="document.getElementById('isoValDisplay').innerText = this.value"
+            onchange="dispatchCameraControl('iso', parseInt(this.value)); dispatchCameraControl('exposure_mode', 'manual')">
+        </div>
+
+        <!-- Exposure Compensation -->
+        <div class="form-group">
+          <div class="form-label">
+            <span>Exposure Compensation (EV)</span>
+            <span id="expValDisplay" style="color: var(--accent-cyan); font-weight: 700;">0.0</span>
+          </div>
+          <input id="controlExpComp" type="range" class="slider-input" min="-4.0" max="4.0" step="0.5" value="0.0"
+            oninput="document.getElementById('expValDisplay').innerText = (this.value > 0 ? '+' : '') + this.value"
+            onchange="dispatchCameraControl('exposure_compensation', parseFloat(this.value))">
+        </div>
+
+        <!-- White Balance -->
+        <div class="form-group">
+          <label class="form-label">White Balance Preset</label>
+          <select id="controlWBSelect" class="form-control" onchange="dispatchCameraControl('white_balance_mode', this.value)">
+            <option value="auto">Auto White Balance (AWB)</option>
+            <option value="daylight">Daylight (5500K)</option>
+            <option value="cloudy">Cloudy (6500K)</option>
+            <option value="incandescent">Incandescent / Tungsten (3200K)</option>
+            <option value="fluorescent">Fluorescent (4000K)</option>
+          </select>
+        </div>
+
+        <!-- Lens Selector -->
+        <div class="form-group">
+          <label class="form-label">Camera Lens</label>
+          <select id="controlLensSelect" class="form-control" onchange="dispatchCameraControl('lens', this.value)">
+            <option value="back_wide">Rear Main (Wide)</option>
+            <option value="back_ultrawide">Rear Ultra-Wide (0.5x)</option>
+            <option value="back_telephoto">Rear Telephoto (3x/5x)</option>
+            <option value="front">Front Selfie Camera</option>
+          </select>
+        </div>
+
+        <!-- Resolution Profile -->
+        <div class="form-group">
+          <label class="form-label">Video Streaming Profile</label>
+          <select id="controlResSelect" class="form-control" onchange="dispatchCameraControl('resolution_profile', this.value)">
+            <option value="720p30">720p 30 FPS (Low Latency / 2.5 Mbps)</option>
+            <option value="1080p30" selected>1080p 30 FPS (Standard Production / 5 Mbps)</option>
+            <option value="1080p60">1080p 60 FPS (High Motion / 8 Mbps)</option>
+            <option value="4k30">4K 30 FPS (Ultra HD / 20 Mbps)</option>
+          </select>
+        </div>
+
+        <!-- Torch / Flashlight -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--bg-secondary); border-radius: 8px;">
+          <div>
+            <div style="font-weight: 600; font-size: 13.5px;">Flashlight / Torch</div>
+            <div style="font-size: 11.5px; color: var(--text-dim);">Enable phone rear LED light</div>
+          </div>
+          <input id="controlTorch" type="checkbox" style="width: 18px; height: 18px; accent-color: var(--accent-cyan); cursor: pointer;"
+            onchange="dispatchCameraControl('torch_enabled', this.checked)">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+</body>
+</html>
+

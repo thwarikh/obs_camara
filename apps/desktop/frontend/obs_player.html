@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>OBS Camera Pro - Stream Player</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: transparent;
+    }
+    #status-overlay {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(8px);
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #f59e0b;
+    }
+    .status-dot.online {
+      background: #10b981;
+      box-shadow: 0 0 8px rgba(16, 185, 129, 0.6);
+    }
+    .status-dot.offline {
+      background: #ef4444;
+    }
+  </style>
+</head>
+<body>
+  <div id="status-overlay">
+    <div id="dot" class="status-dot"></div>
+    <span id="status-text">Connecting to Camera...</span>
+  </div>
+  <video id="videoPlayer" autoplay playsinline></video>
+
+  <script>
+    const urlParts = window.location.pathname.split('/');
+    const deviceId = urlParts[urlParts.length - 1];
+    const cleanId = deviceId.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const streamPath = 'camera_' + cleanId;
+    
+    // MediaMTX WHEP port is 8889
+    const whepUrl = `${window.location.protocol}//${window.location.hostname}:8889/${streamPath}/whep`;
+    const video = document.getElementById('videoPlayer');
+    const overlay = document.getElementById('status-overlay');
+    const statusText = document.getElementById('status-text');
+    const dot = document.getElementById('dot');
+
+    let pc = null;
+    let reconnectTimeout = null;
+
+    async function startWhepSession() {
+      if (pc) {
+        try { pc.close(); } catch(e) {}
+      }
+
+      statusText.innerText = "Connecting WebRTC...";
+      dot.className = "status-dot";
+
+      pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }]
+      });
+
+      pc.addTransceiver('video', { direction: 'recvonly' });
+      pc.addTransceiver('audio', { direction: 'recvonly' });
+
+      pc.ontrack = (event) => {
+        if (event.streams && event.streams[0]) {
+          video.srcObject = event.streams[0];
+        } else {
+          let inboundStream = new MediaStream();
+          inboundStream.addTrack(event.track);
+          video.srcObject = inboundStream;
+        }
+        dot.className = "status-dot online";
+        statusText.innerText = "LIVE";
+        // Hide overlay after 3 seconds of stable streaming
+        setTimeout(() => {
+          overlay.style.opacity = '0';
+        }, 3000);
+      };
+
+      pc.onconnectionstatechange = () => {
+        if (pc.connectionState === 'connected') {
+          dot.className = "status-dot online";
+          statusText.innerText = "LIVE";
+        } else if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+          overlay.style.opacity = '1';
+          dot.className = "status-dot offline";
+          statusText.innerText = "Reconnecting...";
+          scheduleReconnect();
+        }
+      };
+
+      try {
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+
+        const resp = await fetch(whepUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/sdp' },
+          body: offer.sdp
+        });
+
+        if (!resp.ok) {
+          throw new Error('MediaMTX WHEP returned ' + resp.status);
+        }
+
+        const answerSdp = await resp.text();
+        await pc.setRemoteDescription(new RTCSessionDescription({
+          type: 'answer',
+          sdp: answerSdp
+        }));
+      } catch (err) {
+        overlay.style.opacity = '1';
+        dot.className = "status-dot offline";
+        statusText.innerText = "Camera Waiting...";
+        scheduleReconnect();
+      }
+    }
+
+    function scheduleReconnect() {
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      reconnectTimeout = setTimeout(startWhepSession, 3000);
+    }
+
+    // Attempt video playback on user gesture if autoplay policies block it
+    video.addEventListener('click', () => {
+      video.play().catch(() => {});
+    });
+
+    startWhepSession();
+  </script>
+</body>
+</html>
+

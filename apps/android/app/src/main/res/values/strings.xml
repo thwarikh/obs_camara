@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">OBS Camera Pro</string>
+    <string name="start_streaming">Start Broadcast</string>
+    <string name="stop_streaming">Stop Broadcast</string>
+    <string name="scan_pairing_qr">Pair with Desktop</string>
+    <string name="streaming_active">OBS Camera Pro Streaming Active</string>
+</resources>
+
