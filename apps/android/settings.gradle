@@ -10,7 +10,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-        maven { url "https://raw.githubusercontent.com/alvr-org/webrtc-android/master" }
     }
 }
 rootProject.name = "OBS Camera Pro"

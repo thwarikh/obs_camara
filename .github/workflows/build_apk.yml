@@ -20,9 +20,14 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
+        cache: 'gradle'
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+
+    - name: Accept Android SDK Licenses
+      run: |
+        yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses 2>/dev/null || true
 
     - name: Make Gradle Wrapper Executable
       run: chmod +x apps/android/gradlew
@@ -38,4 +43,3 @@ jobs:
         name: OBS-Camera-Pro-Debug-APK
         path: apps/android/app/build/outputs/apk/debug/app-debug.apk
         retention-days: 14
-
