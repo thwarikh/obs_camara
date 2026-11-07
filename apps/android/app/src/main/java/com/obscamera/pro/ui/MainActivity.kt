@@ -24,6 +24,7 @@ import com.obscamera.pro.connection.NetworkMonitor
 import com.obscamera.pro.controls.RemoteControlHandler
 import com.obscamera.pro.service.CameraStreamingService
 import com.obscamera.pro.streaming.SignalingClient
+import com.obscamera.pro.streaming.WebRTCStreamingClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -34,7 +35,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 
-class MainActivity : ComponentActivity(), SignalingClient.SignalingListener {
+class MainActivity : ComponentActivity(), SignalingClient.SignalingListener, WebRTCStreamingClient.StreamStateListener {
 
     private val tag = "OBSCameraPro.Main"
     private lateinit var cameraManager: CameraManager
@@ -42,6 +43,7 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener {
     private lateinit var networkMonitor: NetworkMonitor
     private var signalingClient: SignalingClient? = null
     private var controlHandler: RemoteControlHandler? = null
+    private var webRtcClient: WebRTCStreamingClient? = null
 
     private var deviceId: String = ""
     private var isStreamingState = mutableStateOf(false)
@@ -186,6 +188,7 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener {
 
                 val response = httpClient.newCall(request).execute()
                 val isSuccess = response.isSuccessful
+                val respBody = response.body?.string() ?: ""
 
                 withContext(Dispatchers.Main) {
                     if (isSuccess) {
@@ -196,12 +199,31 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener {
                         pcHostState.value = host
                         isConnectedToPcState.value = true
 
-                        // 3. Connect Signaling WebSocket
+                        // Parse WHIP stream URL from server response
+                        var whipUrl = "http://$host:8889/camera_${deviceId.lowercase().replace("-", "")}/whip"
+                        try {
+                            val respJson = Gson().fromJson(respBody, JsonObject::class.java)
+                            respJson.getAsJsonObject("stream_urls")?.get("whip_publish_url")?.asString?.let {
+                                whipUrl = it
+                            }
+                        } catch (e: Exception) {}
+
+                        // 3. Initialize WebRTC WHIP streaming client
+                        webRtcClient?.stopStreaming()
+                        webRtcClient = WebRTCStreamingClient(this@MainActivity, whipUrl, this@MainActivity)
+                        webRtcClient?.initialize()
+
+                        // Pipe camera frames to WebRTC
+                        cameraManager.onFrameAvailable = { videoFrame ->
+                            webRtcClient?.onFrameCaptured(videoFrame)
+                        }
+
+                        // 4. Connect Signaling WebSocket
                         signalingClient?.disconnect()
                         signalingClient = SignalingClient(deviceId, host, port, this@MainActivity)
                         signalingClient?.connect()
 
-                        // 4. Initialize Remote Control Handler if preview is active
+                        // 5. Initialize Remote Control Handler if preview is active
                         cameraManager.cachedLifecycleOwner?.let { owner ->
                             cameraManager.cachedSurfaceProvider?.let { provider ->
                                 signalingClient?.let { client ->
@@ -233,7 +255,11 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener {
         isStreamingState.value = true
         audioManager.startCapture()
 
-        // Start Foreground Service
+        // 1. Enable CameraX to WebRTC frame piping
+        cameraManager.isStreamingToWebRtc = true
+        webRtcClient?.startStreaming()
+
+        // 2. Start Foreground Service
         val serviceIntent = Intent(this, CameraStreamingService::class.java)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             startForegroundService(serviceIntent)
@@ -241,7 +267,7 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener {
             startService(serviceIntent)
         }
 
-        // Start live telemetry loop to Desktop Dashboard
+        // 3. Start live telemetry loop to Desktop Dashboard
         lifecycleScope.launch(Dispatchers.IO) {
             while (isActive && isStreamingState.value) {
                 signalingClient?.sendTelemetry(
@@ -257,11 +283,13 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener {
             }
         }
 
-        Toast.makeText(this, "Live Broadcast started to OBS Studio!", Toast.LENGTH_SHORT).show()
+        Toast.makeText(this, "Streaming live video to OBS Studio!", Toast.LENGTH_SHORT).show()
     }
 
     private fun stopBroadcast() {
         isStreamingState.value = false
+        cameraManager.isStreamingToWebRtc = false
+        webRtcClient?.stopStreaming()
         audioManager.stopCapture()
         stopService(Intent(this, CameraStreamingService::class.java))
         Toast.makeText(this, "Broadcast stopped", Toast.LENGTH_SHORT).show()
@@ -289,9 +317,28 @@ class MainActivity : ComponentActivity(), SignalingClient.SignalingListener {
         controlHandler?.handleCommand(command)
     }
 
+    override fun onStreamStarted() {
+        lifecycleScope.launch(Dispatchers.Main) {
+            Log.i(tag, "WebRTC live stream ingest active")
+        }
+    }
+
+    override fun onStreamStopped() {
+        lifecycleScope.launch(Dispatchers.Main) {
+            Log.i(tag, "WebRTC live stream ingest stopped")
+        }
+    }
+
+    override fun onStreamError(error: String) {
+        lifecycleScope.launch(Dispatchers.Main) {
+            Log.e(tag, "WebRTC live stream error: $error")
+        }
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         networkMonitor.stopMonitoring()
+        webRtcClient?.stopStreaming()
         audioManager.stopCapture()
         signalingClient?.disconnect()
     }

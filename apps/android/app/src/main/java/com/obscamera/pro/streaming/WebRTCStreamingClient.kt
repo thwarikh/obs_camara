@@ -10,7 +10,6 @@ import java.io.IOException
 
 class WebRTCStreamingClient(
     private val context: Context,
-    private val eglBase: EglBase,
     private val whipUrl: String,
     private val listener: StreamStateListener
 ) {
@@ -22,12 +21,16 @@ class WebRTCStreamingClient(
     }
 
     private val tag = "OBSCameraPro.WebRTC"
+    private val eglBase = EglBase.create()
     private var peerConnectionFactory: PeerConnectionFactory? = null
     private var peerConnection: PeerConnection? = null
     private var videoTrack: VideoTrack? = null
     private var audioTrack: AudioTrack? = null
+    private var capturerObserver: CapturerObserver? = null
 
     private val httpClient = OkHttpClient()
+    var isStreaming = false
+        private set
 
     fun initialize() {
         PeerConnectionFactory.initialize(
@@ -38,8 +41,8 @@ class WebRTCStreamingClient(
 
         val defaultVideoEncoderFactory = DefaultVideoEncoderFactory(
             eglBase.eglBaseContext,
-            true, // enableIntelVp8Encoder
-            true  // enableH264HighProfile
+            true,
+            true
         )
         val defaultVideoDecoderFactory = DefaultVideoDecoderFactory(eglBase.eglBaseContext)
 
@@ -49,17 +52,17 @@ class WebRTCStreamingClient(
             .setOptions(PeerConnectionFactory.Options())
             .createPeerConnectionFactory()
 
-        Log.i(tag, "WebRTC PeerConnectionFactory initialized with H.264 hardware acceleration")
+        Log.i(tag, "WebRTC PeerConnectionFactory initialized for WHIP: $whipUrl")
     }
 
-    fun startStreaming(capturer: VideoCapturer, width: Int, height: Int, fps: Int) {
+    fun startStreaming() {
         val factory = peerConnectionFactory ?: return
+        if (isStreaming) return
+        isStreaming = true
 
         // 1. Video Source & Track
-        val surfaceTextureHelper = SurfaceTextureHelper.create("CaptureThread", eglBase.eglBaseContext)
-        val videoSource = factory.createVideoSource(capturer.isScreencast)
-        capturer.initialize(surfaceTextureHelper, context, videoSource.capturerObserver)
-        capturer.startCapture(width, height, fps)
+        val videoSource = factory.createVideoSource(false)
+        this.capturerObserver = videoSource.capturerObserver
         videoTrack = factory.createVideoTrack("obs_camera_video", videoSource)
 
         // 2. Audio Source & Track
@@ -113,7 +116,6 @@ class WebRTCStreamingClient(
                     peerConnection?.setLocalDescription(object : SdpObserver {
                         override fun onCreateSuccess(p0: SessionDescription?) {}
                         override fun onSetSuccess() {
-                            // Send WHIP HTTP POST with SDP Offer to MediaMTX
                             sendWhipOffer(offerSdp.description)
                         }
                         override fun onCreateFailure(p0: String?) {}
@@ -127,6 +129,12 @@ class WebRTCStreamingClient(
             }
             override fun onSetFailure(err: String?) {}
         }, mediaConstraints)
+    }
+
+    fun onFrameCaptured(frame: VideoFrame) {
+        if (isStreaming) {
+            capturerObserver?.onFrameCaptured(frame)
+        }
     }
 
     private fun sendWhipOffer(sdp: String) {
@@ -166,6 +174,7 @@ class WebRTCStreamingClient(
     }
 
     fun stopStreaming() {
+        isStreaming = false
         try {
             peerConnection?.close()
             peerConnection = null
@@ -178,4 +187,3 @@ class WebRTCStreamingClient(
         }
     }
 }
-

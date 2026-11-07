@@ -17,6 +17,8 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import com.obscamera.pro.streaming.YuvHelper
+import org.webrtc.VideoFrame
 import java.util.concurrent.Executors
 
 class CameraManager(private val context: Context) {
@@ -29,6 +31,8 @@ class CameraManager(private val context: Context) {
 
     var isQrScanningEnabled: Boolean = false
     var onQrCodeDetected: ((String) -> Unit)? = null
+    var isStreamingToWebRtc: Boolean = false
+    var onFrameAvailable: ((VideoFrame) -> Unit)? = null
 
     var cachedLifecycleOwner: LifecycleOwner? = null
         private set
@@ -83,34 +87,41 @@ class CameraManager(private val context: Context) {
             .build()
             .also { analysis ->
                 analysis.setAnalyzer(analysisExecutor) { imageProxy ->
-                    if (isQrScanningEnabled) {
-                        val mediaImage = imageProxy.image
-                        if (mediaImage != null) {
-                            val inputImage = InputImage.fromMediaImage(
-                                mediaImage,
-                                imageProxy.imageInfo.rotationDegrees
-                            )
-                            val scanner = BarcodeScanning.getClient()
-                            scanner.process(inputImage)
-                                .addOnSuccessListener { barcodes ->
-                                    for (barcode in barcodes) {
-                                        barcode.rawValue?.let { raw ->
-                                            if (raw.contains("OBS_CAMERA_PRO") || raw.contains("host") || raw.contains("http") || raw.contains("ws")) {
-                                                isQrScanningEnabled = false
-                                                onQrCodeDetected?.invoke(raw)
-                                            }
+                    val mediaImage = imageProxy.image
+
+                    // 1. Process QR Scanning if requested
+                    if (isQrScanningEnabled && mediaImage != null) {
+                        val inputImage = InputImage.fromMediaImage(
+                            mediaImage,
+                            imageProxy.imageInfo.rotationDegrees
+                        )
+                        val scanner = BarcodeScanning.getClient()
+                        scanner.process(inputImage)
+                            .addOnSuccessListener { barcodes ->
+                                for (barcode in barcodes) {
+                                    barcode.rawValue?.let { raw ->
+                                        if (raw.contains("OBS_CAMERA_PRO") || raw.contains("host") || raw.contains("http") || raw.contains("ws")) {
+                                            isQrScanningEnabled = false
+                                            onQrCodeDetected?.invoke(raw)
                                         }
                                     }
                                 }
-                                .addOnCompleteListener {
-                                    imageProxy.close()
-                                }
-                        } else {
-                            imageProxy.close()
-                        }
-                    } else {
-                        imageProxy.close()
+                            }
                     }
+
+                    // 2. Stream video frame to WebRTC if broadcasting
+                    if (isStreamingToWebRtc && onFrameAvailable != null && mediaImage != null) {
+                        try {
+                            val i420Buffer = YuvHelper.convertYuv420888ToJavaI420(imageProxy)
+                            val videoFrame = VideoFrame(i420Buffer, imageProxy.imageInfo.rotationDegrees, System.nanoTime())
+                            onFrameAvailable?.invoke(videoFrame)
+                            videoFrame.release()
+                        } catch (e: Exception) {
+                            Log.w(tag, "Frame conversion error: ${e.message}")
+                        }
+                    }
+
+                    imageProxy.close()
                 }
             }
 

@@ -191,11 +191,22 @@ def report_capabilities(device_id: str, caps: CapabilitiesReportRequest, db: Ses
     return {"status": "success"}
 
 @router.delete("/{device_id}")
-def delete_device(device_id: str, db: Session = Depends(get_db)):
+async def delete_device(device_id: str, db: Session = Depends(get_db)):
     device = db.query(Device).filter(Device.device_id == device_id).first()
     if not device:
         raise HTTPException(status_code=404, detail="Device not found")
+
+    # Clean up associated DB tables
+    db.query(CameraCapability).filter(CameraCapability.device_id == device_id).delete()
+    db.query(CameraSetting).filter(CameraSetting.device_id == device_id).delete()
+    db.query(AudioSetting).filter(AudioSetting.device_id == device_id).delete()
     db.delete(device)
     db.commit()
+
+    ws_manager.disconnect_camera(device_id)
+    await ws_manager.broadcast_to_desktop({
+        "type": "device_deleted",
+        "device_id": device_id
+    })
     return {"status": "success", "message": f"Device {device_id} removed"}
 

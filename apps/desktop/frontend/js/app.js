@@ -182,7 +182,7 @@ function connectWebSocket() {
 }
 
 function handleWsMessage(msg) {
-  if (msg.type === 'device_connected' || msg.type === 'device_disconnected') {
+  if (msg.type === 'device_connected' || msg.type === 'device_disconnected' || msg.type === 'device_deleted') {
     fetchDevices();
   } else if (msg.type === 'telemetry_update') {
     updateDeviceTelemetryInMemory(msg.device_id, msg.data);
@@ -291,6 +291,9 @@ function renderDashboardDevices() {
           </button>
           <button class="btn btn-primary btn-sm" onclick="sendToOBS('${dev.device_id}')" title="Inject into OBS Studio">
             <i data-lucide="tv"></i> OBS
+          </button>
+          <button class="btn btn-sm" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.4); padding: 6px 10px;" onclick="deleteCameraDevice('${dev.device_id}', '${dev.custom_name}')" title="Delete Camera">
+            <i data-lucide="trash-2"></i>
           </button>
         </div>
       </div>
@@ -430,6 +433,27 @@ async function toggleAudioMute(deviceId, btn) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ device_id: deviceId, muted: isMuted })
   });
+}
+
+async function deleteCameraDevice(deviceId, name) {
+  if (!confirm(`Are you sure you want to remove "${name || deviceId}" from OBS Camera Pro?`)) {
+    return;
+  }
+  try {
+    const res = await fetch(`/api/devices/${encodeURIComponent(deviceId)}`, {
+      method: 'DELETE'
+    });
+    if (res.ok) {
+      STATE.devices = STATE.devices.filter(d => d.device_id !== deviceId);
+      renderDashboardDevices();
+      renderStudioGrid();
+      showNotification(`Camera ${name || deviceId} removed successfully`, 'success');
+    } else {
+      showNotification('Failed to remove camera', 'error');
+    }
+  } catch (err) {
+    showNotification('Network error while removing camera', 'error');
+  }
 }
 
 async function loadPairingQRCode() {
