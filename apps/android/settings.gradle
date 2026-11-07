@@ -12,6 +12,6 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "OBS Camera Pro"
+rootProject.name = "OBSCameraPro"
 include ':app'
 
