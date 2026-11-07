@@ -31,19 +31,16 @@ jobs:
     - name: Build Debug APK
       run: |
         cd apps/android
-        ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.log
+        ./gradlew assembleDebug --no-daemon
 
-    - name: Output Summary on Failure
-      if: failure()
+    - name: Locate Built APK
       run: |
-        echo "### Build Failure Log" >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
-        tail -n 60 apps/android/build_output.log >> $GITHUB_STEP_SUMMARY
-        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        find apps/android -name "*.apk"
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: OBS-Camera-Pro-Debug-APK
-        path: apps/android/app/build/outputs/apk/debug/app-debug.apk
+        path: apps/android/app/build/outputs/apk/**/*.apk
+        if-no-files-found: error
         retention-days: 14
