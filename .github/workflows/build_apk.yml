@@ -31,7 +31,15 @@ jobs:
     - name: Build Debug APK
       run: |
         cd apps/android
-        ./gradlew assembleDebug --no-daemon --stacktrace
+        ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_output.log
+
+    - name: Output Summary on Failure
+      if: failure()
+      run: |
+        echo "### Build Failure Log" >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+        tail -n 60 apps/android/build_output.log >> $GITHUB_STEP_SUMMARY
+        echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4

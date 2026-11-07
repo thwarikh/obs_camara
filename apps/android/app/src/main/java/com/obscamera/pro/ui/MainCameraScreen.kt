@@ -103,7 +103,7 @@ fun MainCameraScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = if (connectionType == "usb_tethering") Icons.Default.Usb else Icons.Default.Wifi,
+                        imageVector = if (connectionType == "usb_tethering") Icons.Filled.Usb else Icons.Filled.Wifi,
                         contentDescription = "Connection",
                         tint = Color(0xFF38BDF8),
                         modifier = Modifier.size(14.dp)
@@ -214,7 +214,7 @@ fun MainCameraScreen(
                         .size(48.dp)
                         .background(Color(0xAA0F172A), CircleShape)
                 ) {
-                    Icon(Icons.Default.QrCodeScanner, contentDescription = "Pair", tint = Color.White)
+                    Icon(Icons.Filled.QrCodeScanner, contentDescription = "Pair", tint = Color.White)
                 }
 
                 // Broadcast Toggle Button
@@ -229,7 +229,7 @@ fun MainCameraScreen(
                     modifier = Modifier.height(52.dp).width(180.dp)
                 ) {
                     Icon(
-                        imageVector = if (isStreaming) Icons.Default.Stop else Icons.Default.PlayArrow,
+                        imageVector = if (isStreaming) Icons.Filled.Stop else Icons.Filled.PlayArrow,
                         contentDescription = null,
                         tint = if (isStreaming) Color.White else Color.Black
                     )
@@ -248,7 +248,7 @@ fun MainCameraScreen(
                         .size(48.dp)
                         .background(Color(0xAA0F172A), CircleShape)
                 ) {
-                    Icon(Icons.Default.Tune, contentDescription = "Controls", tint = Color.White)
+                    Icon(Icons.Filled.Tune, contentDescription = "Controls", tint = Color.White)
                 }
             }
         }
