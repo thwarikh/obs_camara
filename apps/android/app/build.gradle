@@ -69,7 +69,7 @@ dependencies {
     implementation "androidx.camera:camera-view:${camerax_version}"
 
     // WebRTC (Official MavenCentral build)
-    implementation 'io.getstream:stream-webrtc-android:1.1.4'
+    implementation 'io.getstream:stream-webrtc-android:1.1.3'
 
     // Networking (OkHttp & WebSockets)
     implementation 'com.squareup.okhttp3:okhttp:4.12.0'
