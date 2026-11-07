@@ -55,11 +55,11 @@ jobs:
       run: |
         mkdir -p dist
         if [ -f apps/android/app/build/outputs/apk/release/app-release.apk ]; then
-          cp apps/android/app/build/outputs/apk/release/app-release.apk dist/OBS-Camera-Pro-v1.0.1-release.apk
+          cp apps/android/app/build/outputs/apk/release/app-release.apk dist/OBS-Camera-Pro-release.apk
           echo "Release APK created successfully."
         fi
         if [ -f apps/android/app/build/outputs/apk/debug/app-debug.apk ]; then
-          cp apps/android/app/build/outputs/apk/debug/app-debug.apk dist/OBS-Camera-Pro-v1.0.1-debug.apk
+          cp apps/android/app/build/outputs/apk/debug/app-debug.apk dist/OBS-Camera-Pro-debug.apk
           echo "Debug APK created successfully."
         fi
         ls -la dist/

@@ -15,6 +15,8 @@ import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.LifecycleOwner
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
 import java.util.concurrent.Executors
 
 class CameraManager(private val context: Context) {
@@ -24,6 +26,14 @@ class CameraManager(private val context: Context) {
     private var camera: Camera? = null
     private var camera2Control: Camera2CameraControl? = null
     private var camera2Info: Camera2CameraInfo? = null
+
+    var isQrScanningEnabled: Boolean = false
+    var onQrCodeDetected: ((String) -> Unit)? = null
+
+    var cachedLifecycleOwner: LifecycleOwner? = null
+        private set
+    var cachedSurfaceProvider: Preview.SurfaceProvider? = null
+        private set
 
     var currentLens: CameraLens = CameraLens.BACK_WIDE
         private set
@@ -47,6 +57,8 @@ class CameraManager(private val context: Context) {
 
     @SuppressLint("UnsafeOptInUsageError")
     fun bindCamera(lifecycleOwner: LifecycleOwner, surfaceProvider: Preview.SurfaceProvider) {
+        cachedLifecycleOwner = lifecycleOwner
+        cachedSurfaceProvider = surfaceProvider
         val provider = cameraProvider ?: return
         provider.unbindAll()
 
@@ -65,11 +77,49 @@ class CameraManager(private val context: Context) {
                 it.setSurfaceProvider(surfaceProvider)
             }
 
+        val analysisExecutor = Executors.newSingleThreadExecutor()
+        val imageAnalysis = ImageAnalysis.Builder()
+            .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+            .build()
+            .also { analysis ->
+                analysis.setAnalyzer(analysisExecutor) { imageProxy ->
+                    if (isQrScanningEnabled) {
+                        val mediaImage = imageProxy.image
+                        if (mediaImage != null) {
+                            val inputImage = InputImage.fromMediaImage(
+                                mediaImage,
+                                imageProxy.imageInfo.rotationDegrees
+                            )
+                            val scanner = BarcodeScanning.getClient()
+                            scanner.process(inputImage)
+                                .addOnSuccessListener { barcodes ->
+                                    for (barcode in barcodes) {
+                                        barcode.rawValue?.let { raw ->
+                                            if (raw.contains("OBS_CAMERA_PRO") || raw.contains("host") || raw.contains("http") || raw.contains("ws")) {
+                                                isQrScanningEnabled = false
+                                                onQrCodeDetected?.invoke(raw)
+                                            }
+                                        }
+                                    }
+                                }
+                                .addOnCompleteListener {
+                                    imageProxy.close()
+                                }
+                        } else {
+                            imageProxy.close()
+                        }
+                    } else {
+                        imageProxy.close()
+                    }
+                }
+            }
+
         try {
             camera = provider.bindToLifecycle(
                 lifecycleOwner,
                 cameraSelector,
-                preview
+                preview,
+                imageAnalysis
             )
 
             camera2Control = Camera2CameraControl.from(camera!!.cameraControl)
@@ -80,7 +130,7 @@ class CameraManager(private val context: Context) {
                 maxZoomRatio = it.maxZoomRatio
             }
 
-            Log.i(tag, "Camera bound successfully: Lens=$currentLens, Resolution=$currentProfile")
+            Log.i(tag, "Camera bound successfully with QR Analysis: Lens=$currentLens, Resolution=$currentProfile")
         } catch (e: Exception) {
             Log.e(tag, "Failed to bind camera use cases: ${e.message}", e)
         }
