@@ -1,0 +1,142 @@
+Downloading https://services.gradle.org/distributions/gradle-8.4-bin.zip
+............10%............20%.............30%............40%.............50%............60%.............70%............80%.............90%............100%
+
+Welcome to Gradle 8.4!
+
+Here are the highlights of this release:
+ - Compiling and testing with Java 21
+ - Faster Java compilation on Windows
+ - Role focused dependency configurations creation
+
+For more details see https://docs.gradle.org/8.4/release-notes.html
+
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.4/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+> Task :app:preBuild UP-TO-DATE
+> Task :app:preReleaseBuild UP-TO-DATE
+> Task :app:mergeReleaseJniLibFolders
+> Task :app:mergeReleaseNativeLibs
+> Task :app:checkReleaseDuplicateClasses
+> Task :app:buildKotlinToolingMetadata
+> Task :app:checkKotlinGradlePluginConfigurationErrors
+
+> Task :app:stripReleaseDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libbarhopper_v3.so, libimage_processing_util_jni.so, libjingle_peerconnection_so.so.
+
+> Task :app:extractReleaseNativeSymbolTables
+> Task :app:generateReleaseResValues
+> Task :app:checkReleaseAarMetadata
+> Task :app:mergeReleaseNativeDebugMetadata NO-SOURCE
+> Task :app:mapReleaseSourceSetPaths
+> Task :app:generateReleaseResources
+> Task :app:packageReleaseResources
+> Task :app:mergeReleaseResources
+> Task :app:createReleaseCompatibleScreenManifests
+> Task :app:extractDeepLinksRelease
+> Task :app:parseReleaseLocalResources
+> Task :app:processReleaseMainManifest
+> Task :app:processReleaseManifest
+> Task :app:javaPreCompileRelease
+> Task :app:processReleaseManifestForPackage
+> Task :app:desugarReleaseFileDependencies
+> Task :app:processReleaseResources
+> Task :app:mergeExtDexRelease
+> Task :app:mergeReleaseArtProfile
+> Task :app:mergeReleaseShaders
+> Task :app:compileReleaseShaders NO-SOURCE
+> Task :app:generateReleaseAssets UP-TO-DATE
+> Task :app:mergeReleaseAssets
+> Task :app:compressReleaseAssets
+> Task :app:collectReleaseDependencies
+> Task :app:sdkReleaseDependencyData
+> Task :app:validateSigningRelease
+> Task :app:writeReleaseAppMetadata
+> Task :app:writeReleaseSigningConfigVersions
+> Task :app:preDebugBuild UP-TO-DATE
+> Task :app:mergeDebugNativeDebugMetadata NO-SOURCE
+> Task :app:generateDebugResValues
+> Task :app:checkDebugAarMetadata
+> Task :app:mapDebugSourceSetPaths
+> Task :app:generateDebugResources
+> Task :app:optimizeReleaseResources
+> Task :app:packageDebugResources
+> Task :app:createDebugCompatibleScreenManifests
+> Task :app:parseDebugLocalResources
+> Task :app:extractDeepLinksDebug
+> Task :app:processDebugMainManifest
+> Task :app:processDebugManifest
+> Task :app:javaPreCompileDebug
+> Task :app:mergeDebugShaders
+> Task :app:compileDebugShaders NO-SOURCE
+> Task :app:generateDebugAssets UP-TO-DATE
+> Task :app:mergeDebugResources
+> Task :app:mergeDebugAssets
+> Task :app:compressDebugAssets
+> Task :app:desugarDebugFileDependencies
+> Task :app:processDebugManifestForPackage
+> Task :app:checkDebugDuplicateClasses
+> Task :app:processDebugResources
+> Task :app:compileReleaseKotlin
+> Task :app:mergeExtDexDebug
+
+> Task :app:compileReleaseKotlin
+w: Class androidx.camera.camera2.interop.ExperimentalCamera2Interop is not an opt-in requirement marker
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/camera/CameraManager.kt:80:14 'setTargetResolution(Size): Preview.Builder' is deprecated. Deprecated in Java
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/camera/CameraManager.kt:88:14 'setTargetResolution(Size): ImageAnalysis.Builder' is deprecated. Deprecated in Java
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/camera/CameraManager.kt:185:37 Parameter 'exposureCompensation' is never used
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:41:33 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:47:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:56:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:60:35 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:65:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/ui/MainCameraScreen.kt:60:9 Variable 'currentIso' is never used
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/ui/MainCameraScreen.kt:61:9 Variable 'currentFocus' is never used
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/ui/MainCameraScreen.kt:431:25 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
+
+> Task :app:compileReleaseJavaWithJavac NO-SOURCE
+> Task :app:dexBuilderRelease
+> Task :app:processReleaseJavaRes
+> Task :app:mergeReleaseGlobalSynthetics
+> Task :app:mergeDexRelease
+> Task :app:mergeReleaseJavaResource
+> Task :app:mergeLibDexDebug
+> Task :app:mergeDebugJniLibFolders
+> Task :app:compileReleaseArtProfile
+> Task :app:mergeDebugNativeLibs
+> Task :app:validateSigningDebug
+
+> Task :app:stripDebugDebugSymbols
+Unable to strip the following libraries, packaging them as they are: libbarhopper_v3.so, libimage_processing_util_jni.so, libjingle_peerconnection_so.so.
+
+> Task :app:packageRelease
+> Task :app:createReleaseApkListingFileRedirect
+> Task :app:assembleRelease
+> Task :app:writeDebugAppMetadata
+> Task :app:writeDebugSigningConfigVersions
+
+> Task :app:compileDebugKotlin
+w: Class androidx.camera.camera2.interop.ExperimentalCamera2Interop is not an opt-in requirement marker
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/camera/CameraManager.kt:80:14 'setTargetResolution(Size): Preview.Builder' is deprecated. Deprecated in Java
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/camera/CameraManager.kt:88:14 'setTargetResolution(Size): ImageAnalysis.Builder' is deprecated. Deprecated in Java
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/camera/CameraManager.kt:185:37 Parameter 'exposureCompensation' is never used
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:41:33 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:47:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:56:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:60:35 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/streaming/SignalingClient.kt:65:36 The corresponding parameter in the supertype 'WebSocketListener' is named 'webSocket'. This may cause problems when calling this function with named arguments.
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/ui/MainCameraScreen.kt:60:9 Variable 'currentIso' is never used
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/ui/MainCameraScreen.kt:61:9 Variable 'currentFocus' is never used
+w: file:///home/runner/work/obs_camara/obs_camara/apps/android/app/src/main/java/com/obscamera/pro/ui/MainCameraScreen.kt:431:25 'Divider(Modifier = ..., Dp = ..., Color = ...): Unit' is deprecated. Renamed to HorizontalDivider
+
+> Task :app:compileDebugJavaWithJavac NO-SOURCE
+> Task :app:dexBuilderDebug
+> Task :app:processDebugJavaRes
+> Task :app:mergeDebugGlobalSynthetics
+> Task :app:mergeProjectDexDebug
+> Task :app:mergeDebugJavaResource
+> Task :app:packageDebug
+> Task :app:createDebugApkListingFileRedirect
+> Task :app:assembleDebug
+
+BUILD SUCCESSFUL in 3m 58s
+75 actionable tasks: 75 executed
