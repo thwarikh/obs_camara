@@ -1,8 +1,10 @@
 name: Build Android APK
-
+ 
 on:
   push:
     branches: [ main, master ]
+    tags:
+      - 'v*'
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
@@ -33,11 +35,11 @@ jobs:
     - name: Make Gradle Wrapper Executable
       run: chmod +x apps/android/gradlew
 
-    - name: Build Debug APK
+    - name: Build Release and Debug APKs
       shell: bash
       run: |
         cd apps/android
-        ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../../gradle_build.log
+        ./gradlew assembleRelease assembleDebug --no-daemon --stacktrace 2>&1 | tee ../../gradle_build.log
         status=${PIPESTATUS[0]}
         echo "GRADLE_EXIT_CODE=$status" >> $GITHUB_ENV
         if [ $status -ne 0 ]; then
@@ -48,18 +50,56 @@ jobs:
           exit $status
         fi
 
-    - name: Locate Built APK
+    - name: Prepare APK Outputs
       shell: bash
       run: |
-        find apps/android -name "*.apk"
+        mkdir -p dist
+        if [ -f apps/android/app/build/outputs/apk/release/app-release.apk ]; then
+          cp apps/android/app/build/outputs/apk/release/app-release.apk dist/OBS-Camera-Pro-v1.0.1-release.apk
+          echo "Release APK created successfully."
+        fi
+        if [ -f apps/android/app/build/outputs/apk/debug/app-debug.apk ]; then
+          cp apps/android/app/build/outputs/apk/debug/app-debug.apk dist/OBS-Camera-Pro-v1.0.1-debug.apk
+          echo "Debug APK created successfully."
+        fi
+        ls -la dist/
 
-    - name: Upload APK Artifact
+    - name: Upload Release APK Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: OBS-Camera-Pro-Release-APK
+        path: dist/*release.apk
+        if-no-files-found: error
+        retention-days: 14
+
+    - name: Upload Debug APK Artifact
       uses: actions/upload-artifact@v4
       with:
         name: OBS-Camera-Pro-Debug-APK
-        path: apps/android/app/build/outputs/apk/**/*.apk
-        if-no-files-found: error
+        path: dist/*debug.apk
+        if-no-files-found: warn
         retention-days: 14
+
+    - name: Publish GitHub Release
+      if: startsWith(github.ref, 'refs/tags/v')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: dist/*.apk
+        name: "OBS Camera Pro ${{ github.ref_name }}"
+        body: |
+          ### OBS Camera Pro Android App ${{ github.ref_name }}
+          
+          Professional multi-device wireless and wired camera application for OBS Studio.
+          
+          #### What's Included:
+          - **`OBS-Camera-Pro-v1.0.1-release.apk`**: Production-signed release APK with full camera controls and low-latency streaming.
+          - Low-latency WebRTC video & microphone audio streaming to MediaMTX.
+          - Multi-lens switching (Ultra-wide 0.5x, Wide 1x, Telephoto 3x, Front).
+          - Manual camera controls (ISO, Manual Focus Distance, Shutter, Torch).
+          - Instant QR-Code pairing with Desktop Control Center.
+        draft: false
+        prerelease: false
+        generate_release_notes: true
 
     - name: Push Build Log to Branch
       if: always()
