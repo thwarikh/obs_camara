@@ -1,28 +1,19 @@
 """
 Integration and Unit Tests for OBS Camera Pro Desktop Backend.
+Tests API routes for devices, pairing, camera controls, audio, and system endpoints.
 """
-import pytest
-from fastapi.testclient import TestClient
 import os
 import sys
+from fastapi.testclient import TestClient
 
 # Add apps/desktop/backend to sys.path
 backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../apps/desktop/backend"))
 if backend_path not in sys.path:
     sys.path.insert(0, backend_path)
 
-try:
-    from main import app
-    from app.devices.device_manager import device_manager
-    from app.streaming.stream_manager import stream_manager
-    from app.services.network_service import NetworkService
-    from app.streaming.abr_controller import abr_controller
-except (ImportError, ModuleNotFoundError):
-    from apps.desktop.backend.main import app
-    from apps.desktop.backend.app.devices.device_manager import device_manager
-    from apps.desktop.backend.app.streaming.stream_manager import stream_manager
-    from apps.desktop.backend.app.services.network_service import NetworkService
-    from apps.desktop.backend.app.streaming.abr_controller import abr_controller
+from main import app
+from app.devices.device_manager import device_manager
+from app.streaming.abr_controller import abr_controller
 
 client = TestClient(app)
 
@@ -56,7 +47,7 @@ def test_device_pairing_generation():
     assert "token" in get_data
     assert "qr_data_uri" in get_data
 
-def test_device_registration_and_listing():
+def test_device_registration_listing_and_deletion():
     reg_payload = {
         "device_id": "test-android-device-01",
         "custom_name": "Studio Cam Alpha",
@@ -82,9 +73,33 @@ def test_device_registration_and_listing():
     assert len(found) == 1
     assert found[0]["custom_name"] == "Studio Cam Alpha"
 
+    # Test rename endpoint
+    rename_resp = client.put("/api/devices/test-android-device-01/rename", json={"custom_name": "Studio Cam Pro"})
+    assert rename_resp.status_code == 200
+    assert rename_resp.json()["custom_name"] == "Studio Cam Pro"
+
+    # Test delete endpoint
+    del_resp = client.delete("/api/devices/test-android-device-01")
+    assert del_resp.status_code == 200
+    assert del_resp.json()["status"] == "success"
+
+    # Verify device is deleted
+    list_after_del = client.get("/api/devices").json()["devices"]
+    assert not any(d["device_id"] == "test-android-device-01" for d in list_after_del)
+
 def test_camera_controls_dispatch():
+    # Register temporary device for control tests
+    client.post("/api/devices/register", json={
+        "device_id": "test-controls-device",
+        "custom_name": "Controls Cam",
+        "platform": "android",
+        "model": "Test Phone",
+        "token": "tok-ctrl",
+        "ip_address": "192.168.1.155"
+    })
+
     control_payload = {
-        "device_id": "test-android-device-01",
+        "device_id": "test-controls-device",
         "zoom": 2.5,
         "focus_mode": "manual",
         "focus_distance": 0.45,
@@ -97,14 +112,26 @@ def test_camera_controls_dispatch():
     resp = client.post("/api/controls", json=control_payload)
     assert resp.status_code == 200
     data = resp.json()
-    assert data["device_id"] == "test-android-device-01"
+    assert data["device_id"] == "test-controls-device"
     assert data["command"]["zoom"] == 2.5
     assert data["command"]["iso"] == 400
     assert data["command"]["lens"] == "back_ultrawide"
 
+    # Clean up
+    client.delete("/api/devices/test-controls-device")
+
 def test_audio_controls_dispatch():
+    client.post("/api/devices/register", json={
+        "device_id": "test-audio-device",
+        "custom_name": "Audio Cam",
+        "platform": "android",
+        "model": "Test Phone",
+        "token": "tok-audio",
+        "ip_address": "192.168.1.156"
+    })
+
     audio_payload = {
-        "device_id": "test-android-device-01",
+        "device_id": "test-audio-device",
         "gain": 1.4,
         "muted": False,
         "send_to_obs": True
@@ -114,6 +141,9 @@ def test_audio_controls_dispatch():
     data = resp.json()
     assert data["status"] == "success"
     assert data["audio"]["gain"] == 1.4
+
+    # Clean up
+    client.delete("/api/devices/test-audio-device")
 
 def test_system_metrics_and_network():
     metrics_resp = client.get("/api/system/metrics")
@@ -191,5 +221,3 @@ def test_abr_controller_evaluation():
     })
     assert degraded_eval["health_grade"] == "CRITICAL"
     assert degraded_eval["action"] == "downgrade"
-
-
