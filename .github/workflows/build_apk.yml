@@ -29,11 +29,22 @@ jobs:
       run: chmod +x apps/android/gradlew
 
     - name: Build Debug APK
+      shell: bash
       run: |
         cd apps/android
-        ./gradlew assembleDebug --no-daemon
+        ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee ../../gradle_build.log
+        status=${PIPESTATUS[0]}
+        echo "GRADLE_EXIT_CODE=$status" >> $GITHUB_ENV
+        if [ $status -ne 0 ]; then
+          echo "### Gradle Build Failed" >> $GITHUB_STEP_SUMMARY
+          echo '```text' >> $GITHUB_STEP_SUMMARY
+          tail -n 120 ../../gradle_build.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          exit $status
+        fi
 
     - name: Locate Built APK
+      shell: bash
       run: |
         find apps/android -name "*.apk"
 
